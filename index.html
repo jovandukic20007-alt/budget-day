@@ -100,17 +100,36 @@
             <input name="title" type="text" placeholder="e.g. Learn Claude Code" required maxlength="80">
           </label>
           <div class="grid2">
-            <label>Daily habit
+            <label>Habit
               <input name="habit" type="text" placeholder="e.g. Work 1 hour" maxlength="60">
             </label>
             <label>Remind me at
               <input name="time" type="time" value="18:00">
             </label>
           </div>
+          <div class="sched-slot"></div>
           <button class="btn primary" type="submit">Add goal</button>
         </form>
       </article>
       <div id="goal-list"></div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section id="view-calendar" class="view" data-view="calendar" hidden>
+      <div class="month-nav">
+        <button class="btn ghost" id="cal-prev" aria-label="Previous month">‹</button>
+        <strong id="cal-label"></strong>
+        <button class="btn ghost" id="cal-next" aria-label="Next month">›</button>
+      </div>
+      <article class="card cal-card">
+        <div id="cal-head" class="cal-head"></div>
+        <div id="cal-grid" class="cal-grid"></div>
+        <p class="cal-legend muted"><span><i class="m-habit"></i>Habit</span><span><i class="m-step"></i>Goal step</span><span><i class="m-school"></i>Classroom</span><span><b>12</b> spent</span></p>
+      </article>
+      <article class="card">
+        <div class="row-between"><h2 id="cal-day-title"></h2><button id="cal-today" class="btn small ghost">Today</button></div>
+        <ul id="cal-day-list" class="list"></ul>
+      </article>
     </section>
 
     <!-- SETTINGS -->
@@ -141,7 +160,7 @@
 
       <article class="card">
         <h2>Reminders</h2>
-        <p class="muted">Phone notifications only fire while the app is open or was used recently. For a reminder that never misses, use "Add to Google Calendar" on each goal.</p>
+        <p class="muted">You get a notification at each habit's reminder time, only on the days it's scheduled. Phones pause web apps in the background, so open the app once a day to keep reminders coming.</p>
         <button id="notif-btn" class="btn">Turn on notifications</button>
         <p id="notif-status" class="muted"></p>
       </article>
@@ -177,7 +196,8 @@
 
   <nav class="tabbar" aria-label="Sections">
     <button data-tab="today" class="active"><span aria-hidden="true">☀️</span>Today</button>
-    <button data-tab="expenses"><span aria-hidden="true">💶</span>Expenses</button>
+    <button data-tab="calendar"><span aria-hidden="true">📅</span>Calendar</button>
+    <button data-tab="expenses"><span aria-hidden="true">💶</span>Money</button>
     <button data-tab="goals"><span aria-hidden="true">🎯</span>Goals</button>
     <button data-tab="settings"><span aria-hidden="true">⚙️</span>Settings</button>
   </nav>

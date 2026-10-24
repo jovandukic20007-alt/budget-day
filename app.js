@@ -20,6 +20,8 @@ const DEFAULT_STATE = {
 
 let state = load();
 let viewMonth = monthKey(new Date());
+let calMonth = monthKey(new Date());
+let calDay = null; // selected day on the calendar, set on first render
 
 // ---------- storage ----------
 function load() {
@@ -145,6 +147,7 @@ function render() {
   renderToday();
   renderExpenses();
   renderGoals();
+  renderCalendar();
   renderSettings();
 }
 
@@ -161,13 +164,13 @@ function renderToday() {
   $('#today-bar').innerHTML = barHTML(monthKey(new Date()));
 
   const t = todayKey();
-  const habits = state.goals.filter((g) => g.habit);
+  const habits = state.goals.filter((g) => isScheduled(g, t) || (g.habit && g.log[t]));
   $('#today-habits').innerHTML = habits.length
     ? habits.map((g) => `<li class="${g.log[t] ? 'done' : ''}">
         <input type="checkbox" data-habit="${g.id}" ${g.log[t] ? 'checked' : ''} aria-label="Done: ${esc(g.habit)}">
         <span class="grow"><span class="title">${esc(g.habit)}</span><span class="sub">${esc(g.title)}${g.time ? ' · ' + g.time : ''}</span></span>
         <span class="streak">🔥 ${streak(g)}</span></li>`).join('')
-    : '<li class="empty">No habits yet. Add a goal with a daily habit in Goals.</li>';
+    : `<li class="empty">${state.goals.some((g) => g.habit) ? 'Nothing scheduled today. Enjoy the day off.' : 'No habits yet. Add a goal with a habit in Goals.'}</li>`;
 
   if (window.Google) Google.renderTasks();
 }
@@ -199,29 +202,76 @@ function renderExpenses() {
   }).join('') : '<p class="empty">Nothing logged this month.</p>';
 }
 
+// ---------- habit schedules ----------
+const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0]; // Monday first
+function dayName(n, style = 'short') { const d = new Date(2026, 0, 4 + n); return d.toLocaleDateString(undefined, { weekday: style }); } // 4 Jan 2026 is a Sunday
+
+function sched(g) {
+  return g.schedule || { days: [0, 1, 2, 3, 4, 5, 6], every: 1, start: g.created || todayKey(), end: '' };
+}
+function mondayOf(d) { const m = new Date(d); m.setHours(12, 0, 0, 0); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m; }
+function isScheduled(g, key) {
+  if (!g.habit) return false;
+  const s = sched(g);
+  if (key < s.start || (s.end && key > s.end)) return false;
+  const d = parseKey(key);
+  if (!s.days.includes(d.getDay())) return false;
+  if (s.every > 1) {
+    const weeks = Math.round((mondayOf(d) - mondayOf(parseKey(s.start))) / (7 * 864e5));
+    if (weeks % s.every !== 0) return false;
+  }
+  return true;
+}
+function scheduleText(g) {
+  const s = sched(g);
+  const days = [...s.days].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+  let txt = days.length === 7 ? 'Every day'
+    : days.join() === '1,2,3,4,5' ? 'Weekdays'
+    : days.join() === '6,0' ? 'Weekends'
+    : days.map((n) => dayName(n)).join(', ');
+  if (s.every > 1) txt = `Every ${s.every} weeks · ${txt}`;
+  if (s.end) txt += ` · until ${fmtDay(s.end, { day: 'numeric', month: 'short' })}`;
+  return txt;
+}
+// Counts scheduled days done in a row; days off don't break it, and today isn't missed until it's over
 function streak(goal) {
   let n = 0;
   const d = new Date();
-  if (!goal.log[dateKey(d)]) d.setDate(d.getDate() - 1); // today not done yet doesn't break the streak
-  while (goal.log[dateKey(d)]) { n++; d.setDate(d.getDate() - 1); }
+  const first = sched(goal).start;
+  for (let i = 0; i < 730; i++) {
+    const k = dateKey(d);
+    if (k < first) break;
+    if (isScheduled(goal, k)) {
+      if (goal.log[k]) n++;
+      else if (i > 0) break;
+    }
+    d.setDate(d.getDate() - 1);
+  }
   return n;
 }
-
-function calendarLink(goal) {
-  const [h, m] = (goal.time || '18:00').split(':').map(Number);
-  const start = new Date(); start.setHours(h, m, 0, 0);
-  if (start < new Date()) start.setDate(start.getDate() + 1);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
-  const f = (d) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: `${goal.habit || 'Work on goal'}: ${goal.title}`,
-    dates: `${f(start)}/${f(end)}`,
-    recur: 'RRULE:FREQ=DAILY',
-    details: `Daily habit for your goal "${goal.title}".`,
-    ctz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  });
-  return 'https://calendar.google.com/calendar/render?' + params.toString();
+function scheduleFields(s = { days: [1, 2, 3, 4, 5, 6, 0], every: 1, start: todayKey(), end: '' }) {
+  return `<fieldset class="sched">
+    <legend>Repeat on</legend>
+    <div class="chips">${WEEKDAYS.map((n) => `<label class="chip"><input type="checkbox" name="day" value="${n}" ${s.days.includes(n) ? 'checked' : ''}><span>${dayName(n)}</span></label>`).join('')}</div>
+    <div class="grid3">
+      <label>How often
+        <select name="every">${[1, 2, 3, 4].map((n) => `<option value="${n}" ${s.every === n ? 'selected' : ''}>${n === 1 ? 'Every week' : `Every ${n} weeks`}</option>`).join('')}</select>
+      </label>
+      <label>Starts
+        <input type="date" name="start" value="${s.start}" required>
+      </label>
+      <label>Ends (optional)
+        <input type="date" name="end" value="${s.end || ''}">
+      </label>
+    </div>
+  </fieldset>`;
+}
+function readSchedule(f) {
+  const days = [...f.querySelectorAll('input[name=day]:checked')].map((i) => Number(i.value));
+  if (!days.length) { toast('Pick at least one day'); return null; }
+  const start = f.start.value || todayKey(), end = f.end.value;
+  if (end && end < start) { toast('The end date is before the start'); return null; }
+  return { days, every: Number(f.every.value) || 1, start, end };
 }
 
 function renderGoals() {
@@ -233,22 +283,37 @@ function renderGoals() {
     for (let i = 13; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i);
       const k = dateKey(d);
-      dots.push(`<i class="${g.log[k] ? 'on' : ''}" title="${fmtDay(k, { day: 'numeric', month: 'short' })}"></i>`);
+      const cls = g.log[k] ? 'on' : isScheduled(g, k) ? (i > 0 ? 'miss' : 'due') : 'off';
+      dots.push(`<i class="${cls}" title="${fmtDay(k, { weekday: 'short', day: 'numeric', month: 'short' })}"></i>`);
     }
+    const dueToday = isScheduled(g, t);
     return `<article class="card" data-goal="${g.id}">
-      <div class="goal-head"><h2>${esc(g.title)}</h2><span class="streak">🔥 ${streak(g)} day streak</span></div>
-      ${g.habit ? `<label class="habit-box"><input type="checkbox" data-habit="${g.id}" ${g.log[t] ? 'checked' : ''}>
-        <span><b>${esc(g.habit)}</b> today${g.time ? ` <span class="muted">· reminder ${g.time}</span>` : ''}</span></label>
+      <div class="goal-head"><h2>${esc(g.title)}</h2>${g.habit ? `<span class="streak">🔥 ${streak(g)} in a row</span>` : ''}</div>
+      ${g.habit ? `${dueToday || g.log[t] ? `<label class="habit-box"><input type="checkbox" data-habit="${g.id}" ${g.log[t] ? 'checked' : ''}>
+        <span><b>${esc(g.habit)}</b> today${g.time ? ` <span class="muted">· reminder ${g.time}</span>` : ''}</span></label>`
+        : `<div class="habit-box off"><span><b>${esc(g.habit)}</b> · day off today</span></div>`}
+        <p class="muted sched-line">🔁 ${esc(scheduleText(g))}${g.time ? ` at ${g.time}` : ''}</p>
         <div class="dots" aria-label="Last 14 days">${dots.join('')}</div>` : ''}
       <div class="progress"><div style="width:${pct}%"></div></div>
       <p class="muted">${g.steps.length ? `${done} of ${g.steps.length} steps done` : 'Break it into steps below.'}</p>
       <ul class="list">${g.steps.map((s) => `<li class="${s.done ? 'done' : ''}">
         <input type="checkbox" data-step="${s.id}" ${s.done ? 'checked' : ''}>
-        <span class="grow"><span class="title">${esc(s.text)}</span></span>
+        <span class="grow"><span class="title">${esc(s.text)}</span>${s.due ? `<span class="sub ${!s.done && s.due < t ? 'overdue' : ''}">📅 ${fmtDay(s.due, { weekday: 'short', day: 'numeric', month: 'short' })}</span>` : ''}</span>
         <button class="icon-btn" data-del-step="${s.id}" aria-label="Delete step">×</button></li>`).join('')}</ul>
-      <form class="add-step" data-add-step="${g.id}"><input name="text" placeholder="Add a step, e.g. Complete the course" maxlength="100" required><button class="btn">Add</button></form>
+      <form class="add-step" data-add-step="${g.id}"><input name="text" placeholder="Add a step, e.g. Complete the course" maxlength="100" required>
+        <input name="due" type="date" aria-label="Due date (optional)" title="Due date (optional)"><button class="btn">Add</button></form>
+      <details class="edit-goal">
+        <summary class="btn small">Change habit or schedule</summary>
+        <form class="form" data-edit-goal="${g.id}">
+          <div class="grid2">
+            <label>Habit<input name="habit" type="text" value="${esc(g.habit)}" placeholder="e.g. Work 1 hour" maxlength="60"></label>
+            <label>Remind me at<input name="time" type="time" value="${g.time || ''}"></label>
+          </div>
+          ${scheduleFields(sched(g))}
+          <button class="btn primary">Save changes</button>
+        </form>
+      </details>
       <div class="goal-actions">
-        ${g.habit ? `<a class="btn small" href="${calendarLink(g)}" target="_blank" rel="noopener">📅 Add daily reminder to Google Calendar</a>` : ''}
         <button class="btn small ghost danger" data-del-goal="${g.id}">Delete goal</button>
       </div>
     </article>`;
@@ -270,6 +335,66 @@ function renderSettings() {
   $('#notif-btn').hidden = !('Notification' in window) || Notification.permission !== 'default';
 }
 
+// ---------- calendar ----------
+function classroomItems() {
+  try { const c = JSON.parse(localStorage.getItem('myday.gtasks') || 'null'); return Array.isArray(c?.classroom) ? c.classroom : []; }
+  catch { return []; }
+}
+
+// Everything that belongs to one day: habits, steps due, Classroom work due, money spent
+function dayAgenda(key, classroom) {
+  const habits = state.goals.filter((g) => isScheduled(g, key) || (g.habit && g.log[key]));
+  const steps = [];
+  state.goals.forEach((g) => g.steps.forEach((s) => { if (s.due === key) steps.push({ goal: g, step: s }); }));
+  const school = classroom.filter((w) => w.due && dateKey(new Date(w.due)) === key);
+  const spent = state.expenses.filter((e) => e.date === key);
+  return { habits, steps, school, spent };
+}
+
+function renderCalendar() {
+  const grid = $('#cal-grid');
+  if (!grid) return;
+  const t = todayKey();
+  if (!calDay) calDay = t;
+  const classroom = classroomItems();
+  const first = parseKey(calMonth);
+  $('#cal-label').textContent = fmtMonth(calMonth);
+  $('#cal-head').innerHTML = WEEKDAYS.map((n) => `<span>${dayName(n, 'narrow')}</span>`).join('');
+
+  const lead = (first.getDay() + 6) % 7; // blank cells before the 1st, weeks start on Monday
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push('<span class="cal-cell blank"></span>');
+  for (let d = 1; d <= daysInMonth(calMonth); d++) {
+    const key = `${calMonth}-${pad(d)}`;
+    const a = dayAgenda(key, classroom);
+    const marks = [];
+    a.habits.forEach((g) => marks.push(`<i class="m-habit ${g.log[key] ? 'done' : key < t ? 'missed' : ''}"></i>`));
+    a.steps.forEach(({ step }) => marks.push(`<i class="m-step ${step.done ? 'done' : ''}"></i>`));
+    a.school.forEach(() => marks.push('<i class="m-school"></i>'));
+    const spent = sum(a.spent);
+    cells.push(`<button class="cal-cell ${key === t ? 'today' : ''} ${key === calDay ? 'sel' : ''}" data-cal-day="${key}" aria-label="${fmtDay(key)}">
+      <span class="num">${d}</span><span class="marks">${marks.slice(0, 6).join('')}</span>${spent ? `<span class="amt">${Math.round(spent)}</span>` : ''}</button>`);
+  }
+  grid.innerHTML = cells.join('');
+
+  // Details for the selected day
+  const a = dayAgenda(calDay, classroom);
+  const canTick = calDay <= t;
+  const rows = [];
+  a.habits.forEach((g) => rows.push(`<li class="${g.log[calDay] ? 'done' : ''}">
+    ${canTick ? `<input type="checkbox" data-habit="${g.id}" data-date="${calDay}" ${g.log[calDay] ? 'checked' : ''}>` : '<span class="dot m-habit"></span>'}
+    <span class="grow"><span class="title">${esc(g.habit)}</span><span class="sub">🔁 ${esc(g.title)}${g.time ? ' · ' + g.time : ''}</span></span></li>`));
+  a.steps.forEach(({ goal, step }) => rows.push(`<li class="${step.done ? 'done' : ''}">
+    <input type="checkbox" data-step="${step.id}" ${step.done ? 'checked' : ''}>
+    <span class="grow"><span class="title">${esc(step.text)}</span><span class="sub">🎯 Step for ${esc(goal.title)}</span></span></li>`));
+  a.school.forEach((w) => rows.push(`<li><span class="dot m-school"></span>
+    <a class="grow" href="${w.link}" target="_blank" rel="noopener"><span class="title">${esc(w.title)}</span><span class="sub">🏫 Due · ${esc(w.course)}</span></a></li>`));
+  if (a.spent.length) rows.push(`<li><span class="dot m-money"></span><span class="grow"><span class="title">Spent ${money(sum(a.spent))}</span>
+    <span class="sub">${a.spent.map((e) => esc(e.note || e.category)).join(', ')}</span></span></li>`);
+  $('#cal-day-title').textContent = calDay === t ? 'Today' : fmtDay(calDay);
+  $('#cal-day-list').innerHTML = rows.join('') || '<li class="empty">Nothing planned for this day.</li>';
+}
+
 // ---------- tabs ----------
 function showTab(name) {
   document.querySelectorAll('.view').forEach((v) => { v.hidden = v.dataset.view !== name; });
@@ -285,6 +410,16 @@ function bind() {
     const go = e.target.closest('[data-goto]');
     if (go) { e.preventDefault(); showTab(go.dataset.goto); if (go.dataset.focus) $('#' + go.dataset.focus).focus(); }
   });
+
+  $('#goal-form .sched-slot').outerHTML = scheduleFields();
+  $('#cal-grid').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cal-day]');
+    if (b) { calDay = b.dataset.calDay; renderCalendar(); }
+  });
+  const moveCal = (n) => { const d = parseKey(calMonth); d.setMonth(d.getMonth() + n); calMonth = monthKey(d); renderCalendar(); };
+  $('#cal-prev').addEventListener('click', () => moveCal(-1));
+  $('#cal-next').addEventListener('click', () => moveCal(1));
+  $('#cal-today').addEventListener('click', () => { calMonth = monthKey(new Date()); calDay = todayKey(); renderCalendar(); });
 
   $('#exp-category').innerHTML = CATEGORIES.map((c) => `<option>${c}</option>`).join('');
   $('#exp-date').value = todayKey();
@@ -318,8 +453,10 @@ function bind() {
   $('#goal-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const f = e.target;
-    state.goals.push({ id: uid(), title: f.title.value.trim(), habit: f.habit.value.trim(), time: f.time.value, steps: [], log: {}, created: todayKey() });
-    save(); f.reset(); f.time.value = '18:00';
+    const schedule = readSchedule(f);
+    if (!schedule) return;
+    state.goals.push({ id: uid(), title: f.title.value.trim(), habit: f.habit.value.trim(), time: f.time.value, schedule, steps: [], log: {}, created: todayKey() });
+    save(); f.reset(); f.time.value = '18:00'; f.querySelector('.sched').outerHTML = scheduleFields();
     render();
   });
 
@@ -329,7 +466,8 @@ function bind() {
     if (hid) {
       const g = state.goals.find((x) => x.id === hid);
       if (!g) return;
-      if (e.target.checked) g.log[todayKey()] = true; else delete g.log[todayKey()];
+      const day = e.target.dataset.date || todayKey();
+      if (e.target.checked) g.log[day] = true; else delete g.log[day];
       save(); render();
       if (e.target.checked) toast(`Nice! ${streak(g)} day streak`);
     }
@@ -337,18 +475,29 @@ function bind() {
     if (sid) {
       for (const g of state.goals) {
         const s = g.steps.find((x) => x.id === sid);
-        if (s) { s.done = e.target.checked; save(); renderGoals(); }
+        if (s) { s.done = e.target.checked; save(); renderGoals(); renderCalendar(); }
       }
     }
   });
 
   $('#goal-list').addEventListener('submit', (e) => {
+    const eid = e.target.dataset.editGoal;
+    if (eid) {
+      e.preventDefault();
+      const f = e.target, g = state.goals.find((x) => x.id === eid);
+      const schedule = readSchedule(f);
+      if (!schedule) return;
+      Object.assign(g, { habit: f.habit.value.trim(), time: f.time.value, schedule });
+      delete state.notified[g.id];
+      save(); render(); toast('Schedule saved');
+      return;
+    }
     const gid = e.target.dataset.addStep;
     if (!gid) return;
     e.preventDefault();
     const g = state.goals.find((x) => x.id === gid);
-    g.steps.push({ id: uid(), text: e.target.text.value.trim(), done: false });
-    save(); renderGoals();
+    g.steps.push({ id: uid(), text: e.target.text.value.trim(), due: e.target.due.value || '', done: false });
+    save(); renderGoals(); renderCalendar();
     document.querySelector(`[data-add-step="${gid}"] input`).focus();
   });
 
@@ -420,7 +569,7 @@ function checkReminders() {
   const t = todayKey();
   const hhmm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   for (const g of state.goals) {
-    if (!g.habit || !g.time || g.log[t] || state.notified[g.id] === t) continue;
+    if (!g.time || !isScheduled(g, t) || g.log[t] || state.notified[g.id] === t) continue;
     if (hhmm >= g.time) {
       state.notified[g.id] = t; save();
       notify(`Time for: ${g.habit}`, `Goal: ${g.title}`);

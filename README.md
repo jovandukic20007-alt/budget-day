@@ -3,7 +3,8 @@
 A personal web app for your phone and computer with three parts:
 
 - **Expenses.** Log what you spend each day. You get a short daily summary, a day-by-day list, a breakdown by category, and a monthly bar with your target (800 €) and hard limit (1,000 €). The bar turns orange above the target and red above the limit.
-- **Goals.** Add a goal (e.g. "Learn Claude Code"), break it into steps ("Complete the Claude Code course"), and give it a daily habit ("Work 1 hour") with a reminder time. You get a streak counter and the last 14 days at a glance.
+- **Goals.** Add a goal (e.g. "Learn Claude Code"), break it into steps with optional due dates ("Complete the Claude Code course"), and give it a habit ("Work 1 hour") that repeats on the days you choose, with a reminder time. You get a streak counter and the last 14 days at a glance.
+- **Calendar.** A month view of your habits, steps, Classroom due dates and spending.
 - **Today.** One screen with today's spending, today's habits, starred Gmail emails, and Google Classroom work that's due.
 
 Your data is saved in the browser on each device. There's no server and no account. Use **Settings → Export backup** now and then, and **Import backup** to move your data to another device.
@@ -26,10 +27,15 @@ The app needs to be online at an `https://` address. It is hosted for free on Gi
 - **Android (Chrome):** menu ⋮ → *Add to Home screen* / *Install app*.
 - **iPhone (Safari):** Share → *Add to Home Screen*.
 
-## Reminders
+## Habit schedules and reminders
 
-- Browser notifications (Settings → Turn on notifications) only fire while the app is open or was opened recently. Phones close idle web apps.
-- For a reminder that **never misses**, tap **📅 Add daily reminder to Google Calendar** on a goal. It creates a daily repeating event, and your phone's calendar app sends the notification.
+Each habit repeats on the days you pick: any weekdays, every 1–4 weeks, from a start date and optionally until an end date. Change it later with **Change habit or schedule** on the goal. Habits only show on Today, in the calendar and in your streak on the days they're scheduled.
+
+Turn on notifications in Settings to get a nudge at the reminder time on scheduled days. Phones pause web apps in the background, so reminders are most reliable when you open the app once a day.
+
+## Calendar
+
+The **Calendar** tab shows each month with your scheduled habits (done, missed or coming up), goal steps with a due date, Google Classroom due dates and how much you spent each day. Tap a day to see the details and tick things off.
 
 ## Connect Gmail and Google Classroom (one time, about 10 minutes)
 

@@ -1,5 +1,5 @@
 /* Offline support: serve the app shell from cache, update it in the background. */
-const CACHE = 'myday-v1';
+const CACHE = 'myday-v2';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'google.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
