@@ -324,6 +324,8 @@ function goalBody(g) {
   }
   const kids = childrenOf(g.id);
   if (kids.length) parts.push(`<div class="subgoals">${kids.map(goalNode).join('')}</div>`);
+  parts.push(`<label class="move">📍 Part of
+    <select data-move="${g.id}" aria-label="Move this goal">${parentOptions(g.parentId, subtree(g.id))}</select></label>`);
   parts.push(`<div class="goal-actions">
     <details class="edit-goal" ${openStepForms.has(g.id) ? 'open' : ''} data-step-form="${g.id}">
       <summary class="btn small">+ Step</summary>
@@ -546,6 +548,16 @@ function bind() {
       if (e.target.checked) g.log[day] = true; else delete g.log[day];
       save(); render();
       if (e.target.checked) toast(`Nice! ${streak(g)} day streak`);
+    }
+    const mid = e.target.dataset.move;
+    if (mid) {
+      const g = state.goals.find((x) => x.id === mid);
+      g.parentId = e.target.value || null;
+      if (g.parentId) closedNodes.delete(g.parentId);
+      save(); render();
+      const parent = state.goals.find((x) => x.id === g.parentId);
+      toast(parent ? `Moved under "${parent.title}"` : `"${g.title}" is now a big goal`);
+      document.querySelector(`[data-goal="${g.id}"], [data-node="${g.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     const sid = e.target.dataset.step;
     if (sid) {

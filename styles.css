@@ -259,3 +259,5 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .vision-list ul li { margin: 2px 0; }
 .ok-text { color: var(--ok); font-weight: 600; }
 .version { text-align: center; margin: 8px 0 0; font-size: 12px; }
+.move { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.move select { padding: 6px 10px; font-size: 14px; flex: 1; min-width: 0; }
