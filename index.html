@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>My Day</title>
+  <meta name="description" content="Personal expenses, goals and daily tasks">
+  <meta name="theme-color" content="#2f6f5e">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="My Day">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>My Day</h1>
+    <span id="month-pill" class="pill"></span>
+  </header>
+
+  <main>
+    <!-- TODAY -->
+    <section id="view-today" class="view" data-view="today">
+      <p id="today-date" class="muted"></p>
+
+      <article class="card">
+        <h2>Money</h2>
+        <p id="today-money-text" class="summary"></p>
+        <div id="today-bar"></div>
+        <button class="btn" data-goto="expenses" data-focus="exp-amount">+ Add expense</button>
+      </article>
+
+      <article class="card">
+        <h2>Today's habits</h2>
+        <ul id="today-habits" class="list"></ul>
+      </article>
+
+      <article class="card">
+        <div class="row-between">
+          <h2>Tasks from Google</h2>
+          <button id="google-refresh" class="btn small ghost" hidden>Refresh</button>
+        </div>
+        <div id="google-status" class="muted"></div>
+        <h3>Gmail</h3>
+        <ul id="gmail-list" class="list"></ul>
+        <h3>Google Classroom</h3>
+        <ul id="classroom-list" class="list"></ul>
+      </article>
+    </section>
+
+    <!-- EXPENSES -->
+    <section id="view-expenses" class="view" data-view="expenses" hidden>
+      <article class="card">
+        <h2>Add expense</h2>
+        <form id="exp-form" class="form" autocomplete="off">
+          <div class="grid2">
+            <label>Amount
+              <input id="exp-amount" name="amount" type="text" inputmode="decimal" placeholder="0.00" required>
+            </label>
+            <label>Category
+              <select name="category" id="exp-category"></select>
+            </label>
+          </div>
+          <label>What was it?
+            <input name="note" type="text" placeholder="e.g. lunch, bus ticket" maxlength="80">
+          </label>
+          <label>Date
+            <input name="date" id="exp-date" type="date" required>
+          </label>
+          <button class="btn primary" type="submit">Save expense</button>
+        </form>
+      </article>
+
+      <div class="month-nav">
+        <button class="btn ghost" id="month-prev" aria-label="Previous month">‹</button>
+        <strong id="month-label"></strong>
+        <button class="btn ghost" id="month-next" aria-label="Next month">›</button>
+      </div>
+
+      <article class="card">
+        <h2>This month</h2>
+        <p id="month-text" class="summary"></p>
+        <div id="month-bar"></div>
+        <div id="cat-breakdown"></div>
+      </article>
+
+      <article class="card">
+        <h2>Day by day</h2>
+        <div id="day-list"></div>
+      </article>
+    </section>
+
+    <!-- GOALS -->
+    <section id="view-goals" class="view" data-view="goals" hidden>
+      <article class="card">
+        <h2>New goal</h2>
+        <form id="goal-form" class="form" autocomplete="off">
+          <label>Goal
+            <input name="title" type="text" placeholder="e.g. Learn Claude Code" required maxlength="80">
+          </label>
+          <div class="grid2">
+            <label>Daily habit
+              <input name="habit" type="text" placeholder="e.g. Work 1 hour" maxlength="60">
+            </label>
+            <label>Remind me at
+              <input name="time" type="time" value="18:00">
+            </label>
+          </div>
+          <button class="btn primary" type="submit">Add goal</button>
+        </form>
+      </article>
+      <div id="goal-list"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="view" data-view="settings" hidden>
+      <article class="card">
+        <h2>Budget</h2>
+        <form id="budget-form" class="form">
+          <div class="grid2">
+            <label>Monthly target
+              <input name="target" type="number" min="0" step="1" required>
+            </label>
+            <label>Hard limit
+              <input name="limit" type="number" min="0" step="1" required>
+            </label>
+          </div>
+          <label>Currency
+            <select name="currency">
+              <option value="EUR">Euro (€)</option>
+              <option value="RSD">Serbian dinar (RSD)</option>
+              <option value="USD">US dollar ($)</option>
+              <option value="GBP">British pound (£)</option>
+              <option value="CHF">Swiss franc (CHF)</option>
+            </select>
+          </label>
+          <button class="btn primary" type="submit">Save budget</button>
+        </form>
+      </article>
+
+      <article class="card">
+        <h2>Reminders</h2>
+        <p class="muted">Phone notifications only fire while the app is open or was used recently. For a reminder that never misses, use "Add to Google Calendar" on each goal.</p>
+        <button id="notif-btn" class="btn">Turn on notifications</button>
+        <p id="notif-status" class="muted"></p>
+      </article>
+
+      <article class="card">
+        <h2>Google (Gmail and Classroom)</h2>
+        <form id="google-form" class="form">
+          <label>OAuth client ID
+            <input name="clientId" type="text" placeholder="1234…apps.googleusercontent.com">
+          </label>
+          <label>Which emails count as tasks (Gmail search)
+            <input name="gmailQuery" type="text">
+          </label>
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+        <div class="row gap">
+          <button id="google-connect" class="btn">Connect Google</button>
+          <button id="google-disconnect" class="btn ghost">Disconnect</button>
+        </div>
+        <p class="muted">See README.md for the one-time Google Cloud setup.</p>
+      </article>
+
+      <article class="card">
+        <h2>Backup</h2>
+        <p class="muted">Your data is saved on this device only. Export a backup now and then, or to move it to another device.</p>
+        <div class="row gap wrap">
+          <button id="export-btn" class="btn">Export backup</button>
+          <label class="btn file-btn">Import backup<input id="import-file" type="file" accept="application/json" hidden></label>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Sections">
+    <button data-tab="today" class="active"><span aria-hidden="true">☀️</span>Today</button>
+    <button data-tab="expenses"><span aria-hidden="true">💶</span>Expenses</button>
+    <button data-tab="goals"><span aria-hidden="true">🎯</span>Goals</button>
+    <button data-tab="settings"><span aria-hidden="true">⚙️</span>Settings</button>
+  </nav>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="google.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
