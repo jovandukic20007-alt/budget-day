@@ -145,6 +145,7 @@ function barHTML(mk) {
 function render() {
   renderPill();
   renderToday();
+  renderVision();
   renderExpenses();
   renderGoals();
   renderCalendar();
@@ -168,7 +169,7 @@ function renderToday() {
   $('#today-habits').innerHTML = habits.length
     ? habits.map((g) => `<li class="${g.log[t] ? 'done' : ''}">
         <input type="checkbox" data-habit="${g.id}" ${g.log[t] ? 'checked' : ''} aria-label="Done: ${esc(g.habit)}">
-        <span class="grow"><span class="title">${esc(g.habit)}</span><span class="sub">${esc(g.title)}${g.time ? ' · ' + g.time : ''}</span></span>
+        <span class="grow"><span class="title">${esc(g.habit)}</span><span class="sub">${esc(goalPath(g).join(' › '))}${g.time ? ' · ' + g.time : ''}</span></span>
         <span class="streak">🔥 ${streak(g)}</span></li>`).join('')
     : `<li class="empty">${state.goals.some((g) => g.habit) ? 'Nothing scheduled today. Enjoy the day off.' : 'No habits yet. Add a goal with a habit in Goals.'}</li>`;
 
@@ -274,11 +275,34 @@ function readSchedule(f) {
   return { days, every: Number(f.every.value) || 1, start, end };
 }
 
-function renderGoals() {
+// ---------- goal tree ----------
+const closedNodes = new Set(); // sub-goals the viewer collapsed this session
+const openStepForms = new Set(); // keeps the step form open while adding several steps
+function childrenOf(id) { return state.goals.filter((g) => (g.parentId || null) === id); }
+function subtree(id) { return [id, ...childrenOf(id).flatMap((c) => subtree(c.id))]; }
+function goalPath(g) { const p = []; let c = g; while (c) { p.unshift(c.title); c = state.goals.find((x) => x.id === c.parentId); } return p; }
+function treeStats(g) {
+  const all = subtree(g.id).map((id) => state.goals.find((x) => x.id === id));
+  const steps = all.flatMap((x) => x.steps);
+  return { goals: all.length - 1, steps: steps.length, done: steps.filter((x) => x.done).length, habits: all.filter((x) => x.habit).length };
+}
+// Options for "Part of": every goal, indented by depth, minus the ones in `exclude`
+function parentOptions(selected, exclude = []) {
+  const out = [`<option value="">Nothing, it's a big goal</option>`];
+  const walk = (pid, depth) => childrenOf(pid).forEach((g) => {
+    if (exclude.includes(g.id)) return;
+    out.push(`<option value="${g.id}" ${g.id === selected ? 'selected' : ''}>${'  '.repeat(depth)}${depth ? '└ ' : ''}${esc(g.title)}</option>`);
+    walk(g.id, depth + 1);
+  });
+  walk(null, 0);
+  return out.join('');
+}
+
+function goalBody(g) {
   const t = todayKey();
-  $('#goal-list').innerHTML = state.goals.length ? state.goals.map((g) => {
-    const done = g.steps.filter((s) => s.done).length;
-    const pct = g.steps.length ? (done / g.steps.length) * 100 : 0;
+  const parts = [];
+  if (g.why) parts.push(`<p class="why">💭 ${esc(g.why)}</p>`);
+  if (g.habit) {
     const dots = [];
     for (let i = 13; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i);
@@ -286,38 +310,85 @@ function renderGoals() {
       const cls = g.log[k] ? 'on' : isScheduled(g, k) ? (i > 0 ? 'miss' : 'due') : 'off';
       dots.push(`<i class="${cls}" title="${fmtDay(k, { weekday: 'short', day: 'numeric', month: 'short' })}"></i>`);
     }
-    const dueToday = isScheduled(g, t);
-    return `<article class="card" data-goal="${g.id}">
-      <div class="goal-head"><h2>${esc(g.title)}</h2>${g.habit ? `<span class="streak">🔥 ${streak(g)} in a row</span>` : ''}</div>
-      ${g.habit ? `${dueToday || g.log[t] ? `<label class="habit-box"><input type="checkbox" data-habit="${g.id}" ${g.log[t] ? 'checked' : ''}>
-        <span><b>${esc(g.habit)}</b> today${g.time ? ` <span class="muted">· reminder ${g.time}</span>` : ''}</span></label>`
-        : `<div class="habit-box off"><span><b>${esc(g.habit)}</b> · day off today</span></div>`}
-        <p class="muted sched-line">🔁 ${esc(scheduleText(g))}${g.time ? ` at ${g.time}` : ''}</p>
-        <div class="dots" aria-label="Last 14 days">${dots.join('')}</div>` : ''}
-      <div class="progress"><div style="width:${pct}%"></div></div>
-      <p class="muted">${g.steps.length ? `${done} of ${g.steps.length} steps done` : 'Break it into steps below.'}</p>
-      <ul class="list">${g.steps.map((s) => `<li class="${s.done ? 'done' : ''}">
-        <input type="checkbox" data-step="${s.id}" ${s.done ? 'checked' : ''}>
-        <span class="grow"><span class="title">${esc(s.text)}</span>${s.due ? `<span class="sub ${!s.done && s.due < t ? 'overdue' : ''}">📅 ${fmtDay(s.due, { weekday: 'short', day: 'numeric', month: 'short' })}</span>` : ''}</span>
-        <button class="icon-btn" data-del-step="${s.id}" aria-label="Delete step">×</button></li>`).join('')}</ul>
-      <form class="add-step" data-add-step="${g.id}"><input name="text" placeholder="Add a step, e.g. Complete the course" maxlength="100" required>
-        <input name="due" type="date" aria-label="Due date (optional)" title="Due date (optional)"><button class="btn">Add</button></form>
-      <details class="edit-goal">
-        <summary class="btn small">Change habit or schedule</summary>
-        <form class="form" data-edit-goal="${g.id}">
-          <div class="grid2">
-            <label>Habit<input name="habit" type="text" value="${esc(g.habit)}" placeholder="e.g. Work 1 hour" maxlength="60"></label>
-            <label>Remind me at<input name="time" type="time" value="${g.time || ''}"></label>
-          </div>
-          ${scheduleFields(sched(g))}
-          <button class="btn primary">Save changes</button>
-        </form>
-      </details>
-      <div class="goal-actions">
-        <button class="btn small ghost danger" data-del-goal="${g.id}">Delete goal</button>
-      </div>
+    parts.push(isScheduled(g, t) || g.log[t]
+      ? `<label class="habit-box"><input type="checkbox" data-habit="${g.id}" ${g.log[t] ? 'checked' : ''}>
+        <span><b>${esc(g.habit)}</b> today${g.time ? ` <span class="muted">· reminder ${g.time}</span>` : ''}</span><span class="streak">🔥 ${streak(g)}</span></label>`
+      : `<div class="habit-box off"><span><b>${esc(g.habit)}</b> · day off today</span></div>`);
+    parts.push(`<p class="muted sched-line">🔁 ${esc(scheduleText(g))}${g.time ? ` at ${g.time}` : ''}</p><div class="dots" aria-label="Last 14 days">${dots.join('')}</div>`);
+  }
+  if (g.steps.length) {
+    parts.push(`<ul class="list">${g.steps.map((x) => `<li class="${x.done ? 'done' : ''}">
+      <input type="checkbox" data-step="${x.id}" ${x.done ? 'checked' : ''}>
+      <span class="grow"><span class="title">${esc(x.text)}</span>${x.due ? `<span class="sub ${!x.done && x.due < t ? 'overdue' : ''}">📅 ${fmtDay(x.due, { weekday: 'short', day: 'numeric', month: 'short' })}</span>` : ''}</span>
+      <button class="icon-btn" data-del-step="${x.id}" aria-label="Delete step">×</button></li>`).join('')}</ul>`);
+  }
+  const kids = childrenOf(g.id);
+  if (kids.length) parts.push(`<div class="subgoals">${kids.map(goalNode).join('')}</div>`);
+  parts.push(`<div class="goal-actions">
+    <details class="edit-goal" ${openStepForms.has(g.id) ? 'open' : ''} data-step-form="${g.id}">
+      <summary class="btn small">+ Step</summary>
+      <form class="add-step" data-add-step="${g.id}"><input name="text" placeholder="e.g. Finish the course" maxlength="100" required>
+        <input name="due" type="date" aria-label="Due date (optional)" title="Due date (optional)"><button class="btn primary">Add</button></form>
+    </details>
+    <button class="btn small" data-add-under="${g.id}">+ Goal under this</button>
+    <details class="edit-goal">
+      <summary class="btn small ghost">Edit</summary>
+      <form class="form" data-edit-goal="${g.id}">
+        <label>Goal<input name="title" type="text" value="${esc(g.title)}" maxlength="80" required></label>
+        <label>Part of<select name="parent">${parentOptions(g.parentId, subtree(g.id))}</select></label>
+        <label>Why it matters<input name="why" type="text" value="${esc(g.why || '')}" maxlength="140"></label>
+        <div class="grid2">
+          <label>Habit<input name="habit" type="text" value="${esc(g.habit)}" placeholder="e.g. Work 1 hour" maxlength="60"></label>
+          <label>Remind me at<input name="time" type="time" value="${g.time || ''}"></label>
+        </div>
+        ${scheduleFields(sched(g))}
+        <div class="row gap wrap"><button class="btn primary">Save changes</button><button type="button" class="btn ghost danger" data-del-goal="${g.id}">Delete goal</button></div>
+      </form>
+    </details>
+  </div>`);
+  return parts.join('');
+}
+
+function goalBadges(g) {
+  const st = treeStats(g);
+  const b = [];
+  if (g.habit) b.push(`🔁 ${esc(g.habit)}${isScheduled(g, todayKey()) ? (g.log[todayKey()] ? ' ✓' : ' · today') : ''}`);
+  if (st.steps) b.push(`${st.done}/${st.steps} steps`);
+  if (st.goals) b.push(`${st.goals} goal${st.goals === 1 ? '' : 's'} below`);
+  return b.map((x) => `<span class="badge">${x}</span>`).join('');
+}
+
+function goalNode(g) {
+  return `<details class="node" data-node="${g.id}" ${closedNodes.has(g.id) ? '' : 'open'}>
+    <summary><span class="node-title">${esc(g.title)}</span><span class="badges">${goalBadges(g)}</span></summary>
+    <div class="node-body">${goalBody(g)}</div>
+  </details>`;
+}
+
+function renderGoals() {
+  const roots = childrenOf(null);
+  $('#goal-list').innerHTML = roots.length ? roots.map((g) => {
+    const st = treeStats(g);
+    const pct = st.steps ? (st.done / st.steps) * 100 : 0;
+    return `<article class="card big-goal" data-goal="${g.id}">
+      <p class="eyebrow">Big goal</p>
+      <h2>${esc(g.title)}</h2>
+      ${st.steps ? `<div class="progress"><div style="width:${pct}%"></div></div>
+      <p class="muted">${st.done} of ${st.steps} steps done${st.goals ? ` across ${st.goals + 1} goals` : ''}</p>` : ''}
+      ${goalBody(g)}
     </article>`;
-  }).join('') : '<p class="empty">No goals yet. Try "Learn Claude Code" with the habit "Work 1 hour".</p>';
+  }).join('') : '<p class="empty">No goals yet. Start with a big one, like "Be rich" or "End phone addiction", then add the goals that get you there.</p>';
+  $('#goal-form select[name=parent]').innerHTML = parentOptions($('#goal-form select[name=parent]').value);
+}
+
+function renderVision() {
+  const roots = childrenOf(null);
+  $('#vision-card').hidden = !roots.length;
+  $('#vision-list').innerHTML = roots.map((g) => {
+    const kids = childrenOf(g.id);
+    return `<li><b>${esc(g.title)}</b>${g.why ? `<span class="sub">${esc(g.why)}</span>` : ''}
+      ${kids.length ? `<ul>${kids.map((k) => `<li>${esc(k.title)}${k.habit && isScheduled(k, todayKey()) ? ` <span class="${k.log[todayKey()] ? 'ok-text' : 'due-soon'}">· ${k.log[todayKey()] ? 'done today' : 'today'}</span>` : ''}</li>`).join('')}</ul>` : ''}</li>`;
+  }).join('');
 }
 
 function renderSettings() {
@@ -453,11 +524,16 @@ function bind() {
   $('#goal-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const f = e.target;
-    const schedule = readSchedule(f);
-    if (!schedule) return;
-    state.goals.push({ id: uid(), title: f.title.value.trim(), habit: f.habit.value.trim(), time: f.time.value, schedule, steps: [], log: {}, created: todayKey() });
+    const habit = f.habit.value.trim();
+    const schedule = habit ? readSchedule(f) : undefined;
+    if (habit && !schedule) return;
+    const parentId = f.parent.value || null;
+    state.goals.push({ id: uid(), parentId, title: f.title.value.trim(), why: f.why.value.trim(), habit, time: habit ? f.time.value : '', schedule, steps: [], log: {}, created: todayKey() });
+    if (parentId) closedNodes.delete(parentId);
     save(); f.reset(); f.time.value = '18:00'; f.querySelector('.sched').outerHTML = scheduleFields();
+    f.querySelector('.habit-opt').open = false;
     render();
+    toast(parentId ? 'Goal added' : 'Big goal added');
   });
 
   // Habit checkboxes appear on Today and Goals
@@ -487,9 +563,9 @@ function bind() {
       const f = e.target, g = state.goals.find((x) => x.id === eid);
       const schedule = readSchedule(f);
       if (!schedule) return;
-      Object.assign(g, { habit: f.habit.value.trim(), time: f.time.value, schedule });
+      Object.assign(g, { title: f.title.value.trim(), parentId: f.parent.value || null, why: f.why.value.trim(), habit: f.habit.value.trim(), time: f.time.value, schedule });
       delete state.notified[g.id];
-      save(); render(); toast('Schedule saved');
+      save(); render(); toast('Saved');
       return;
     }
     const gid = e.target.dataset.addStep;
@@ -501,13 +577,31 @@ function bind() {
     document.querySelector(`[data-add-step="${gid}"] input`).focus();
   });
 
+  $('#goal-list').addEventListener('toggle', (e) => {
+    const id = e.target.dataset?.node;
+    if (id) { if (e.target.open) closedNodes.delete(id); else closedNodes.add(id); }
+    const sf = e.target.dataset?.stepForm;
+    if (sf) {
+      if (e.target.open) { openStepForms.add(sf); e.target.querySelector('input').focus(); } else openStepForms.delete(sf);
+    }
+  }, true);
+
   $('#goal-list').addEventListener('click', (e) => {
     const sid = e.target.dataset.delStep;
     if (sid) { state.goals.forEach((g) => { g.steps = g.steps.filter((s) => s.id !== sid); }); save(); renderGoals(); }
     const gid = e.target.dataset.delGoal;
     if (gid) {
       const g = state.goals.find((x) => x.id === gid);
-      if (confirm(`Delete the goal "${g.title}" and its history?`)) { state.goals = state.goals.filter((x) => x.id !== gid); save(); render(); }
+      const ids = subtree(gid);
+      const extra = ids.length > 1 ? ` and the ${ids.length - 1} goal${ids.length === 2 ? '' : 's'} under it` : '';
+      if (confirm(`Delete "${g.title}"${extra}?`)) { state.goals = state.goals.filter((x) => !ids.includes(x.id)); save(); render(); }
+    }
+    const under = e.target.dataset.addUnder;
+    if (under) {
+      const f = $('#goal-form');
+      f.parent.value = under;
+      f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      f.title.focus({ preventScroll: true });
     }
   });
 

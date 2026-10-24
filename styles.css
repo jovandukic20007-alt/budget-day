@@ -225,3 +225,36 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
   main { padding-top: 56px; }
   .toast { bottom: 24px; }
 }
+
+/* Goal tree */
+.big-goal { border-top: 4px solid var(--accent); }
+.big-goal > h2 { font-size: 20px; margin-bottom: 4px; }
+.eyebrow { margin: 0 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.why { margin: 6px 0 8px; color: var(--muted); font-style: italic; font-size: 15px; }
+.subgoals { display: grid; gap: 8px; margin-top: 12px; }
+.node { border-left: 3px solid var(--accent-soft); padding-left: 10px; }
+.node > summary { cursor: pointer; list-style: none; display: grid; gap: 4px; padding: 6px 0; }
+.node > summary::-webkit-details-marker { display: none; }
+.node-title { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.node-title::before { content: '▸'; color: var(--muted); font-size: 12px; transition: transform .15s; }
+.node[open] > summary .node-title::before { transform: rotate(90deg); }
+.badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.badge { font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+.node-body { padding-bottom: 6px; }
+.habit-box .streak { margin-left: auto; }
+.goal-actions { align-items: flex-start; }
+.goal-actions .edit-goal { margin-top: 0; }
+.goal-actions .edit-goal[open] { flex-basis: 100%; order: 9; }
+.goal-actions .edit-goal[open] > summary { margin-bottom: 8px; }
+.habit-opt summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 14px; list-style: none; padding: 4px 0; }
+.habit-opt summary::-webkit-details-marker { display: none; }
+.habit-opt[open] { display: grid; gap: 10px; }
+
+/* Today reminder */
+.vision { background: linear-gradient(135deg, var(--accent-soft), var(--card) 70%); }
+.vision-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.vision-list > li > b { font-size: 16px; }
+.vision-list .sub { display: block; font-size: 13px; color: var(--muted); font-style: italic; }
+.vision-list ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
+.vision-list ul li { margin: 2px 0; }
+.ok-text { color: var(--ok); font-weight: 600; }

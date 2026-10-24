@@ -24,6 +24,11 @@
     <section id="view-today" class="view" data-view="today">
       <p id="today-date" class="muted"></p>
 
+      <article class="card vision" id="vision-card" hidden>
+        <div class="row-between"><h2>Remember why</h2><button class="btn small ghost" data-goto="goals">Goals</button></div>
+        <ul id="vision-list" class="vision-list"></ul>
+      </article>
+
       <article class="card">
         <h2>Money</h2>
         <p id="today-money-text" class="summary"></p>
@@ -94,11 +99,19 @@
     <!-- GOALS -->
     <section id="view-goals" class="view" data-view="goals" hidden>
       <article class="card">
-        <h2>New goal</h2>
+        <h2>Add a goal</h2>
         <form id="goal-form" class="form" autocomplete="off">
           <label>Goal
-            <input name="title" type="text" placeholder="e.g. Learn Claude Code" required maxlength="80">
+            <input name="title" type="text" placeholder="e.g. Be rich, Get into university, Learn Claude Code" required maxlength="80">
           </label>
+          <label>Part of
+            <select name="parent"></select>
+          </label>
+          <label>Why it matters (optional)
+            <input name="why" type="text" placeholder="e.g. Freedom for me and my family" maxlength="140">
+          </label>
+          <details class="habit-opt">
+          <summary>+ Make it a repeating habit (optional)</summary>
           <div class="grid2">
             <label>Habit
               <input name="habit" type="text" placeholder="e.g. Work 1 hour" maxlength="60">
@@ -108,6 +121,7 @@
             </label>
           </div>
           <div class="sched-slot"></div>
+          </details>
           <button class="btn primary" type="submit">Add goal</button>
         </form>
       </article>
