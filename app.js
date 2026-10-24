@@ -690,6 +690,8 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker failed', e));
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then((reg) => document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); }))
+    .catch((e) => console.warn('Service worker failed', e));
 }
 
