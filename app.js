@@ -14,6 +14,7 @@ const DEFAULT_STATE = {
   },
   expenses: [],   // {id, date:'YYYY-MM-DD', amount, category, note}
   goals: [],      // {id, title, habit, time:'HH:MM', steps:[{id,text,done}], log:{'YYYY-MM-DD':true}, created}
+  tasks: [],      // {id, text, date:'YYYY-MM-DD'|'', time:'HH:MM'|'', done, doneAt}
   notified: {},   // goalId -> 'YYYY-MM-DD' of the last reminder shown
   taskDone: {},   // Gmail/Classroom item id -> true when ticked off here
 };
@@ -148,6 +149,7 @@ function render() {
   renderVision();
   renderExpenses();
   renderGoals();
+  renderTasks();
   renderCalendar();
   renderSettings();
 }
@@ -172,6 +174,10 @@ function renderToday() {
         <span class="grow"><span class="title">${esc(g.habit)}</span><span class="sub">${esc(goalPath(g).join(' › '))}${g.time ? ' · ' + g.time : ''}</span></span>
         <span class="streak">🔥 ${streak(g)}</span></li>`).join('')
     : `<li class="empty">${state.goals.some((g) => g.habit) ? 'Nothing scheduled today. Enjoy the day off.' : 'No habits yet. Add a goal with a habit in Goals.'}</li>`;
+
+  const todays = state.tasks.filter((x) => x.date && (x.date < t ? !x.done : x.date === t)).sort(taskSort);
+  $('#today-tasks').innerHTML = todays.length ? todays.map((x) => taskItem(x, x.date !== t)).join('')
+    : '<li class="empty">No tasks for today.</li>';
 
   if (window.Google) Google.renderTasks();
 }
@@ -408,6 +414,47 @@ function renderSettings() {
   $('#notif-btn').hidden = !('Notification' in window) || Notification.permission !== 'default';
 }
 
+// ---------- tasks ----------
+function taskSort(a, b) { return (a.date || '9999').localeCompare(b.date || '9999') || (a.time || '99').localeCompare(b.time || '99'); }
+function taskWhen(x, withDay = true) {
+  const t = todayKey();
+  if (!x.date) return x.time || '';
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  const day = x.date === t ? 'Today' : x.date === dateKey(tomorrow) ? 'Tomorrow' : fmtDay(x.date, { weekday: 'short', day: 'numeric', month: 'short' });
+  return [withDay ? day : '', x.time].filter(Boolean).join(' · ');
+}
+function taskItem(x, withDay = true) {
+  const late = !x.done && x.date && (x.date < todayKey() || (x.date === todayKey() && x.time && x.time < new Date().toTimeString().slice(0, 5)));
+  const when = taskWhen(x, withDay);
+  return `<li class="${x.done ? 'done' : ''}">
+    <input type="checkbox" data-task="${x.id}" ${x.done ? 'checked' : ''} aria-label="Done: ${esc(x.text)}">
+    <span class="grow"><span class="title">${esc(x.text)}</span>${when ? `<span class="sub ${late ? 'overdue' : ''}">${late && x.date < todayKey() ? 'Overdue · ' : ''}${esc(when)}</span>` : ''}</span>
+    <button class="icon-btn" data-del-task="${x.id}" aria-label="Delete task">×</button></li>`;
+}
+function renderTasks() {
+  const t = todayKey();
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  const tm = dateKey(tomorrow);
+  const open = state.tasks.filter((x) => !x.done).sort(taskSort);
+  const groups = [
+    ['Overdue', open.filter((x) => x.date && x.date < t), true],
+    ['Today', open.filter((x) => x.date === t), false],
+    ['Tomorrow', open.filter((x) => x.date === tm), false],
+    ['Later', open.filter((x) => x.date && x.date > tm), true],
+    ['Anytime', open.filter((x) => !x.date), false],
+  ].filter(([, list]) => list.length);
+  $('#task-groups').innerHTML = groups.length
+    ? groups.map(([name, list, withDay]) => `<h3>${name} <span class="count">${list.length}</span></h3><ul class="list">${list.map((x) => taskItem(x, withDay)).join('')}</ul>`).join('')
+    : '<p class="empty">Nothing to do. Add a task above.</p>';
+  const done = state.tasks.filter((x) => x.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+  $('#tasks-done').hidden = !done.length;
+  $('#tasks-done-count').textContent = done.length;
+  $('#tasks-done-list').innerHTML = done.slice(0, 50).map((x) => taskItem(x)).join('');
+  const due = open.filter((x) => x.date && x.date <= t).length;
+  $('#tasks-badge').textContent = due || '';
+  $('#tasks-badge').hidden = !due;
+}
+
 // ---------- calendar ----------
 function classroomItems() {
   try { const c = JSON.parse(localStorage.getItem('myday.gtasks') || 'null'); return Array.isArray(c?.classroom) ? c.classroom : []; }
@@ -421,7 +468,8 @@ function dayAgenda(key, classroom) {
   state.goals.forEach((g) => g.steps.forEach((s) => { if (s.due === key) steps.push({ goal: g, step: s }); }));
   const school = classroom.filter((w) => w.due && dateKey(new Date(w.due)) === key);
   const spent = state.expenses.filter((e) => e.date === key);
-  return { habits, steps, school, spent };
+  const tasks = state.tasks.filter((x) => x.date === key).sort(taskSort);
+  return { habits, steps, school, spent, tasks };
 }
 
 function renderCalendar() {
@@ -444,6 +492,7 @@ function renderCalendar() {
     a.habits.forEach((g) => marks.push(`<i class="m-habit ${g.log[key] ? 'done' : key < t ? 'missed' : ''}"></i>`));
     a.steps.forEach(({ step }) => marks.push(`<i class="m-step ${step.done ? 'done' : ''}"></i>`));
     a.school.forEach(() => marks.push('<i class="m-school"></i>'));
+    a.tasks.forEach((x) => marks.push(`<i class="m-task ${x.done ? 'done' : ''}"></i>`));
     const spent = sum(a.spent);
     cells.push(`<button class="cal-cell ${key === t ? 'today' : ''} ${key === calDay ? 'sel' : ''}" data-cal-day="${key}" aria-label="${fmtDay(key)}">
       <span class="num">${d}</span><span class="marks">${marks.slice(0, 6).join('')}</span>${spent ? `<span class="amt">${Math.round(spent)}</span>` : ''}</button>`);
@@ -454,6 +503,7 @@ function renderCalendar() {
   const a = dayAgenda(calDay, classroom);
   const canTick = calDay <= t;
   const rows = [];
+  a.tasks.forEach((x) => rows.push(taskItem(x, false)));
   a.habits.forEach((g) => rows.push(`<li class="${g.log[calDay] ? 'done' : ''}">
     ${canTick ? `<input type="checkbox" data-habit="${g.id}" data-date="${calDay}" ${g.log[calDay] ? 'checked' : ''}>` : '<span class="dot m-habit"></span>'}
     <span class="grow"><span class="title">${esc(g.habit)}</span><span class="sub">🔁 ${esc(g.title)}${g.time ? ' · ' + g.time : ''}</span></span></li>`));
@@ -493,6 +543,41 @@ function bind() {
   $('#cal-prev').addEventListener('click', () => moveCal(-1));
   $('#cal-next').addEventListener('click', () => moveCal(1));
   $('#cal-today').addEventListener('click', () => { calMonth = monthKey(new Date()); calDay = todayKey(); renderCalendar(); });
+
+  const addTask = (f) => {
+    const text = f.text.value.trim();
+    if (!text) return;
+    state.tasks.push({ id: uid(), text, date: f.date ? f.date.value : todayKey(), time: f.time ? f.time.value : '', done: false });
+    save(); f.text.value = ''; if (f.time) f.time.value = ''; if (f.date) f.date.value = todayKey();
+    render(); f.text.focus();
+    toast('Task added');
+  };
+  $('#task-form').addEventListener('submit', (e) => { e.preventDefault(); addTask(e.target); });
+  $('#today-task-form').addEventListener('submit', (e) => { e.preventDefault(); addTask(e.target); });
+  $('#task-date').value = todayKey();
+  document.querySelectorAll('[data-task-date]').forEach((b) => b.addEventListener('click', () => {
+    const d = new Date(); d.setDate(d.getDate() + Number(b.dataset.taskDate));
+    $('#task-date').value = b.dataset.taskDate === 'none' ? '' : dateKey(d);
+  }));
+  document.addEventListener('change', (e) => {
+    const id = e.target.dataset.task;
+    if (!id) return;
+    const x = state.tasks.find((y) => y.id === id);
+    x.done = e.target.checked; x.doneAt = x.done ? Date.now() : undefined;
+    save(); render();
+    if (x.done) toast('Done ✓');
+  });
+  document.addEventListener('click', (e) => {
+    const id = e.target.dataset.delTask;
+    if (!id) return;
+    state.tasks = state.tasks.filter((y) => y.id !== id);
+    save(); render();
+  });
+  $('#tasks-clear').addEventListener('click', () => {
+    if (!confirm('Remove all finished tasks?')) return;
+    state.tasks = state.tasks.filter((y) => !y.done);
+    save(); render();
+  });
 
   $('#exp-category').innerHTML = CATEGORIES.map((c) => `<option>${c}</option>`).join('');
   $('#exp-date').value = todayKey();
@@ -681,6 +766,12 @@ function checkReminders() {
       notify(`Time for: ${g.habit}`, `Goal: ${g.title}`);
     }
   }
+  for (const x of state.tasks) {
+    const key = 'task:' + x.id;
+    if (x.done || x.date !== t || !x.time || state.notified[key] || hhmm < x.time) continue;
+    state.notified[key] = t; save();
+    notify(`Task: ${x.text}`, `Planned for ${x.time}`);
+  }
 }
 
 // ---------- start ----------
@@ -696,7 +787,7 @@ setInterval(checkReminders, 30 * 1000);
 let lastDay = todayKey();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
-    if (todayKey() !== lastDay) { lastDay = todayKey(); viewMonth = monthKey(new Date()); $('#exp-date').value = lastDay; render(); }
+    if (todayKey() !== lastDay) { lastDay = todayKey(); viewMonth = monthKey(new Date()); $('#exp-date').value = lastDay; $('#task-date').value = lastDay; render(); }
     checkReminders();
   }
 });

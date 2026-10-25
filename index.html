@@ -37,6 +37,15 @@
       </article>
 
       <article class="card">
+        <div class="row-between"><h2>Today's tasks</h2><button class="btn small ghost" data-goto="tasks">All tasks</button></div>
+        <ul id="today-tasks" class="list"></ul>
+        <form id="today-task-form" class="quick-add" autocomplete="off">
+          <input name="text" type="text" placeholder="Add a task for today…" maxlength="120" aria-label="New task for today">
+          <button class="btn">Add</button>
+        </form>
+      </article>
+
+      <article class="card">
         <h2>Today's habits</h2>
         <ul id="today-habits" class="list"></ul>
       </article>
@@ -128,6 +137,42 @@
       <div id="goal-list"></div>
     </section>
 
+    <!-- TASKS -->
+    <section id="view-tasks" class="view" data-view="tasks" hidden>
+      <article class="card">
+        <h2>Add a task</h2>
+        <form id="task-form" class="form" autocomplete="off">
+          <label>Task
+            <input name="text" type="text" placeholder="e.g. Buy groceries, call the bank, laundry" maxlength="120" required>
+          </label>
+          <div class="grid2">
+            <label>Date (optional)
+              <input id="task-date" name="date" type="date">
+            </label>
+            <label>Time (optional)
+              <input name="time" type="time">
+            </label>
+          </div>
+          <div class="row gap wrap date-chips">
+            <button type="button" class="btn small ghost" data-task-date="0">Today</button>
+            <button type="button" class="btn small ghost" data-task-date="1">Tomorrow</button>
+            <button type="button" class="btn small ghost" data-task-date="7">In a week</button>
+            <button type="button" class="btn small ghost" data-task-date="none">No date</button>
+          </div>
+          <button class="btn primary" type="submit">Add task</button>
+        </form>
+      </article>
+      <article class="card">
+        <h2>To do</h2>
+        <div id="task-groups"></div>
+      </article>
+      <details class="card" id="tasks-done" hidden>
+        <summary class="row-between"><h2>Done <span class="count" id="tasks-done-count"></span></h2><span class="muted">Show</span></summary>
+        <ul id="tasks-done-list" class="list"></ul>
+        <button id="tasks-clear" class="btn small ghost danger">Clear finished tasks</button>
+      </details>
+    </section>
+
     <!-- CALENDAR -->
     <section id="view-calendar" class="view" data-view="calendar" hidden>
       <div class="month-nav">
@@ -138,7 +183,7 @@
       <article class="card cal-card">
         <div id="cal-head" class="cal-head"></div>
         <div id="cal-grid" class="cal-grid"></div>
-        <p class="cal-legend muted"><span><i class="m-habit"></i>Habit</span><span><i class="m-step"></i>Goal step</span><span><i class="m-school"></i>Classroom</span><span><b>12</b> spent</span></p>
+        <p class="cal-legend muted"><span><i class="m-habit"></i>Habit</span><span><i class="m-step"></i>Goal step</span><span><i class="m-school"></i>Classroom</span><span><i class="m-task"></i>Task</span><span><b>12</b> spent</span></p>
       </article>
       <article class="card">
         <div class="row-between"><h2 id="cal-day-title"></h2><button id="cal-today" class="btn small ghost">Today</button></div>
@@ -205,12 +250,13 @@
           <label class="btn file-btn">Import backup<input id="import-file" type="file" accept="application/json" hidden></label>
         </div>
       </article>
-      <p class="muted version">Version 5 · move goals with “Part of”</p>
+      <p class="muted version">Version 6 · tasks</p>
     </section>
   </main>
 
   <nav class="tabbar" aria-label="Sections">
     <button data-tab="today" class="active"><span aria-hidden="true">☀️</span>Today</button>
+    <button data-tab="tasks"><span aria-hidden="true">✅</span>Tasks<b id="tasks-badge" class="tab-badge" hidden></b></button>
     <button data-tab="calendar"><span aria-hidden="true">📅</span>Calendar</button>
     <button data-tab="expenses"><span aria-hidden="true">💶</span>Money</button>
     <button data-tab="goals"><span aria-hidden="true">🎯</span>Goals</button>

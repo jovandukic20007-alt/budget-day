@@ -200,7 +200,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 /* Tab bar */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(6, 1fr);
   background: var(--card); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -261,3 +261,20 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .version { text-align: center; margin: 8px 0 0; font-size: 12px; }
 .move { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--muted); white-space: nowrap; }
 .move select { padding: 6px 10px; font-size: 14px; flex: 1; min-width: 0; }
+
+/* Tasks */
+.quick-add { display: flex; gap: 8px; margin-top: 10px; }
+.quick-add input { flex: 1; }
+.date-chips { margin-top: 0; }
+.count { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--bg); border-radius: 999px; padding: 1px 7px; margin-left: 4px; text-transform: none; letter-spacing: 0; }
+#task-groups h3:first-child { margin-top: 0; }
+#tasks-done > summary { cursor: pointer; list-style: none; }
+#tasks-done > summary::-webkit-details-marker { display: none; }
+#tasks-done > summary h2 { margin: 0; }
+#tasks-done[open] > summary .muted { visibility: hidden; }
+#tasks-done[open] > summary { margin-bottom: 8px; }
+.tabbar button { position: relative; }
+.tab-badge { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 11px; line-height: 17px; font-weight: 700; }
+.m-task { display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: #8a5cc7; transform: rotate(45deg); }
+.m-task.done { opacity: .35; }
+@media (min-width: 900px) { .tab-badge { position: static; margin-left: 2px; } }
