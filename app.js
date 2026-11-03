@@ -14,6 +14,7 @@ const DEFAULT_STATE = {
   },
   expenses: [],   // {id, date:'YYYY-MM-DD', amount, category, note}
   goals: [],      // {id, title, habit, time:'HH:MM', steps:[{id,text,done}], log:{'YYYY-MM-DD':true}, created}
+  routine: [],    // {id, text, log:{'YYYY-MM-DD':true}, created}
   tasks: [],      // {id, text, date:'YYYY-MM-DD'|'', time:'HH:MM'|'', done, doneAt}
   notified: {},   // goalId -> 'YYYY-MM-DD' of the last reminder shown
   taskDone: {},   // Gmail/Classroom item id -> true when ticked off here
@@ -150,6 +151,7 @@ function render() {
   renderExpenses();
   renderGoals();
   renderTasks();
+  renderRoutine();
   renderCalendar();
   renderSettings();
 }
@@ -414,6 +416,61 @@ function renderSettings() {
   $('#notif-btn').hidden = !('Notification' in window) || Notification.permission !== 'default';
 }
 
+// ---------- routine ----------
+function routineStreak(r) {
+  let n = 0;
+  const d = new Date();
+  if (!r.log[dateKey(d)]) d.setDate(d.getDate() - 1); // today isn't missed until it's over
+  while (r.log[dateKey(d)]) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function routineDay(key) {
+  const items = state.routine.filter((r) => !r.created || r.created <= key);
+  return { total: items.length, done: items.filter((r) => r.log[key]).length };
+}
+function perfectStreak() {
+  let n = 0;
+  const d = new Date();
+  const ok = (k) => { const x = routineDay(k); return x.total && x.done === x.total; };
+  if (!ok(dateKey(d))) d.setDate(d.getDate() - 1);
+  while (ok(dateKey(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function routineItem(r) {
+  const t = todayKey();
+  return `<li class="${r.log[t] ? 'done' : ''}">
+    <input type="checkbox" data-routine="${r.id}" ${r.log[t] ? 'checked' : ''} aria-label="Done: ${esc(r.text)}">
+    <span class="grow"><span class="title">${esc(r.text)}</span></span>
+    <span class="streak">🔥 ${routineStreak(r)}</span></li>`;
+}
+function routineProgress() {
+  const { total, done } = routineDay(todayKey());
+  if (!total) return '';
+  return `<div class="progress"><div style="width:${(done / total) * 100}%"></div></div>
+    <p class="muted">${done === total ? '🎉 All done today!' : `${done} of ${total} done today`}${perfectStreak() ? ` · ${perfectStreak()} perfect day${perfectStreak() === 1 ? '' : 's'} in a row` : ''}</p>`;
+}
+function renderRoutine() {
+  $('#routine-progress').innerHTML = routineProgress();
+  $('#routine-list').innerHTML = state.routine.length
+    ? state.routine.map((r) => routineItem(r).replace('</li>', `<button class="icon-btn" data-del-routine="${r.id}" aria-label="Remove from routine">×</button></li>`)).join('')
+    : '<li class="empty">Add the things you want to do every day, like "Drink 90 oz of water" or "Walk 2 km".</li>';
+  // Last 14 days: how much of the routine got done each day
+  const cells = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = dateKey(d);
+    const { total, done } = routineDay(k);
+    const pct = total ? done / total : 0;
+    cells.push(`<div class="rday ${i === 0 ? 'today' : ''}" title="${fmtDay(k, { weekday: 'short', day: 'numeric', month: 'short' })}: ${done}/${total}">
+      <div class="rbar"><div style="height:${pct * 100}%" class="${pct === 1 ? 'full' : ''}"></div></div><span>${dayName(d.getDay(), 'narrow')}</span></div>`);
+  }
+  $('#routine-history').innerHTML = state.routine.length ? cells.join('') : '';
+  $('#routine-history-card').hidden = !state.routine.length;
+  $('#today-routine').innerHTML = state.routine.length ? state.routine.map(routineItem).join('')
+    : '<li class="empty">No routine yet. Set one up in Routine.</li>';
+  $('#today-routine-progress').innerHTML = routineProgress();
+}
+
 // ---------- tasks ----------
 function taskSort(a, b) { return (a.date || '9999').localeCompare(b.date || '9999') || (a.time || '99').localeCompare(b.time || '99'); }
 function taskWhen(x, withDay = true) {
@@ -503,6 +560,9 @@ function renderCalendar() {
   const a = dayAgenda(calDay, classroom);
   const canTick = calDay <= t;
   const rows = [];
+  const rd = routineDay(calDay);
+  if (rd.total && calDay <= t) rows.push(`<li><span class="dot m-routine"></span><span class="grow"><span class="title">Routine ${rd.done}/${rd.total}</span>
+    <span class="sub">${state.routine.filter((r) => r.log[calDay]).map((r) => esc(r.text)).join(', ') || 'Nothing ticked'}</span></span></li>`);
   a.tasks.forEach((x) => rows.push(taskItem(x, false)));
   a.habits.forEach((g) => rows.push(`<li class="${g.log[calDay] ? 'done' : ''}">
     ${canTick ? `<input type="checkbox" data-habit="${g.id}" data-date="${calDay}" ${g.log[calDay] ? 'checked' : ''}>` : '<span class="dot m-habit"></span>'}
@@ -543,6 +603,31 @@ function bind() {
   $('#cal-prev').addEventListener('click', () => moveCal(-1));
   $('#cal-next').addEventListener('click', () => moveCal(1));
   $('#cal-today').addEventListener('click', () => { calMonth = monthKey(new Date()); calDay = todayKey(); renderCalendar(); });
+
+  $('#routine-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = e.target.text.value.trim();
+    if (!text) return;
+    state.routine.push({ id: uid(), text, log: {}, created: todayKey() });
+    save(); e.target.text.value = ''; render(); e.target.text.focus();
+  });
+  document.addEventListener('change', (e) => {
+    const id = e.target.dataset.routine;
+    if (!id) return;
+    const r = state.routine.find((y) => y.id === id);
+    if (e.target.checked) r.log[todayKey()] = true; else delete r.log[todayKey()];
+    save(); render();
+    const { total, done } = routineDay(todayKey());
+    if (e.target.checked) toast(done === total ? '🎉 Routine complete for today!' : `${done} of ${total} done`);
+  });
+  document.addEventListener('click', (e) => {
+    const id = e.target.dataset.delRoutine;
+    if (!id) return;
+    const r = state.routine.find((y) => y.id === id);
+    if (!confirm(`Remove "${r.text}" from your routine? Its history goes too.`)) return;
+    state.routine = state.routine.filter((y) => y.id !== id);
+    save(); render();
+  });
 
   const addTask = (f) => {
     const text = f.text.value.trim();

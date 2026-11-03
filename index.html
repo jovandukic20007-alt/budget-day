@@ -37,6 +37,12 @@
       </article>
 
       <article class="card">
+        <div class="row-between"><h2>Routine</h2><button class="btn small ghost" data-goto="routine">Edit</button></div>
+        <div id="today-routine-progress"></div>
+        <ul id="today-routine" class="list"></ul>
+      </article>
+
+      <article class="card">
         <div class="row-between"><h2>Today's tasks</h2><button class="btn small ghost" data-goto="tasks">All tasks</button></div>
         <ul id="today-tasks" class="list"></ul>
         <form id="today-task-form" class="quick-add" autocomplete="off">
@@ -173,6 +179,24 @@
       </details>
     </section>
 
+    <!-- ROUTINE -->
+    <section id="view-routine" class="view" data-view="routine" hidden>
+      <article class="card">
+        <h2>Every day</h2>
+        <div id="routine-progress"></div>
+        <ul id="routine-list" class="list"></ul>
+        <form id="routine-form" class="quick-add" autocomplete="off">
+          <input name="text" type="text" placeholder="e.g. Drink 90 oz of water, walk 2 km" maxlength="80" aria-label="New routine item">
+          <button class="btn primary">Add</button>
+        </form>
+        <p class="muted">The boxes clear every day at midnight. Your history and streaks are kept.</p>
+      </article>
+      <article class="card" id="routine-history-card" hidden>
+        <h2>Last 14 days</h2>
+        <div id="routine-history" class="rhistory"></div>
+      </article>
+    </section>
+
     <!-- CALENDAR -->
     <section id="view-calendar" class="view" data-view="calendar" hidden>
       <div class="month-nav">
@@ -250,13 +274,14 @@
           <label class="btn file-btn">Import backup<input id="import-file" type="file" accept="application/json" hidden></label>
         </div>
       </article>
-      <p class="muted version">Version 6 · tasks</p>
+      <p class="muted version">Version 7 · routine</p>
     </section>
   </main>
 
   <nav class="tabbar" aria-label="Sections">
     <button data-tab="today" class="active"><span aria-hidden="true">☀️</span>Today</button>
     <button data-tab="tasks"><span aria-hidden="true">✅</span>Tasks<b id="tasks-badge" class="tab-badge" hidden></b></button>
+    <button data-tab="routine"><span aria-hidden="true">💧</span>Routine</button>
     <button data-tab="calendar"><span aria-hidden="true">📅</span>Calendar</button>
     <button data-tab="expenses"><span aria-hidden="true">💶</span>Money</button>
     <button data-tab="goals"><span aria-hidden="true">🎯</span>Goals</button>

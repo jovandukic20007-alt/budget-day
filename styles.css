@@ -200,7 +200,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 /* Tab bar */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  display: grid; grid-template-columns: repeat(6, 1fr);
+  display: grid; grid-template-columns: repeat(7, 1fr);
   background: var(--card); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -218,7 +218,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 }
 
 @media (min-width: 900px) {
-  .tabbar { top: 56px; bottom: auto; left: 50%; transform: translateX(-50%); width: 640px; border: 1px solid var(--line); border-radius: 12px; }
+  .tabbar { top: 56px; bottom: auto; left: 50%; transform: translateX(-50%); width: 760px; border: 1px solid var(--line); border-radius: 12px; }
   .tabbar button { display: flex; justify-content: center; gap: 6px; font-size: 14px; align-items: center; padding: 10px 0; }
   .tabbar button span { font-size: 16px; }
   body { padding-bottom: 24px; }
@@ -278,3 +278,13 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1p
 .m-task { display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: #8a5cc7; transform: rotate(45deg); }
 .m-task.done { opacity: .35; }
 @media (min-width: 900px) { .tab-badge { position: static; margin-left: 2px; } }
+
+/* Routine */
+.rhistory { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; align-items: end; }
+.rday { display: grid; gap: 4px; justify-items: center; font-size: 11px; color: var(--muted); }
+.rday.today span { color: var(--accent); font-weight: 700; }
+.rbar { width: 100%; max-width: 26px; height: 64px; background: var(--line); border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
+.rbar div { width: 100%; background: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.rbar div.full { background: var(--accent); }
+.m-routine { display: inline-block; width: 7px; height: 7px; border-radius: 999px; background: #3a9ad9; }
+@media (max-width: 480px) { .tabbar button { font-size: 10px; } .tabbar button span { font-size: 18px; } }

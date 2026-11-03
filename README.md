@@ -5,6 +5,7 @@ A personal web app for your phone and computer with three parts:
 - **Expenses.** Log what you spend each day. You get a short daily summary, a day-by-day list, a breakdown by category, and a monthly bar with your target (800 €) and hard limit (1,000 €). The bar turns orange above the target and red above the limit.
 - **Goals.** A tree of goals. Start with a big goal ("Be rich", "End phone addiction"), add the goals that get you there under it ("Get into a good university", "Learn Claude Code"), and go as deep as you like. Any goal can have steps with optional due dates, and a habit ("No phone 1 hour before bed") that repeats on the days you choose, with a reminder time and a streak. Today shows your big goals at the top as a reminder.
 - **Tasks.** Everyday to-dos that aren't part of a goal, with an optional date and time. They're grouped into Overdue, Today, Tomorrow, Later and Anytime, and today's tasks also appear on Today and in the Calendar.
+- **Routine.** Things you tick off every day ("Drink 90 oz of water", "Walk 2 km"). The boxes clear at midnight, and each item keeps a streak. You also get a count of perfect days in a row and a 14-day chart. Your routine shows on Today too.
 - **Calendar.** A month view of your habits, steps, Classroom due dates and spending.
 - **Today.** One screen with today's spending, today's habits, starred Gmail emails, and Google Classroom work that's due.
 
