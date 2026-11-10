@@ -125,7 +125,7 @@ window.Google = (() => {
       lastError = e.message;
     }
     loading = false;
-    renderTasks();
+    window.MyDay.render(); // Today, School and Calendar all show Classroom work
   }
 
   function doneMap() { const s = S(); return (s.taskDone ||= {}); }
@@ -193,7 +193,7 @@ window.Google = (() => {
       const id = e.target.dataset.gtask;
       if (!id) return;
       if (e.target.checked) doneMap()[id] = true; else delete doneMap()[id];
-      window.MyDay.save(); renderTasks();
+      window.MyDay.save(); window.MyDay.render();
     });
     // Load fresh tasks when the app opens, if we still hold a valid token
     if (getToken()) refresh(false);
