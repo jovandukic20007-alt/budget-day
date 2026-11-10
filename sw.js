@@ -1,6 +1,6 @@
 /* Offline support. Network first so updates show up right away; the cache is only a fallback when offline. */
-const CACHE = 'myday-v4';
-const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'google.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png'];
+const CACHE = 'myday-v5';
+const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'google.js', 'school.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE)

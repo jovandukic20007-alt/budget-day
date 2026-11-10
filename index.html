@@ -51,6 +51,11 @@
         </form>
       </article>
 
+      <article class="card" id="today-school" hidden>
+        <div class="row-between"><h2>School</h2><button class="btn small ghost" data-goto="school">Open</button></div>
+        <ul id="today-school-list" class="list"></ul>
+      </article>
+
       <article class="card">
         <h2>Today's habits</h2>
         <ul id="today-habits" class="list"></ul>
@@ -179,6 +184,124 @@
       </details>
     </section>
 
+    <!-- SCHOOL -->
+    <section id="view-school" class="view" data-view="school" hidden>
+      <article class="card start-card" id="school-start" hidden>
+        <h2>Set up School</h2>
+        <p class="muted">Start by adding your subjects at the bottom of this page, with the days and times you have them. Then add homework, tests and grades as they come.</p>
+        <button class="btn small" data-scroll="subject-form">Add subjects</button>
+      </article>
+
+      <article class="card">
+        <h2 id="school-today-title">Today's classes</h2>
+        <ul id="school-classes" class="list"></ul>
+        <div id="school-today-extra"></div>
+      </article>
+
+      <article class="card">
+        <h2>Homework</h2>
+        <form id="hw-form" class="form" autocomplete="off">
+          <label>What to do
+            <input name="text" type="text" placeholder="e.g. Math p. 42, exercises 1 to 10" maxlength="140" required>
+          </label>
+          <div class="grid2">
+            <label>Subject<select name="subject"></select></label>
+            <label>Due<input name="due" type="date"></label>
+          </div>
+          <div class="row gap wrap date-chips">
+            <button type="button" class="btn small ghost" data-hw-date="0">Today</button>
+            <button type="button" class="btn small ghost" data-hw-date="1">Tomorrow</button>
+            <button type="button" class="btn small ghost" data-hw-date="2">In 2 days</button>
+            <button type="button" class="btn small ghost" data-hw-date="7">In a week</button>
+            <button type="button" class="btn small ghost" data-hw-date="none">No date</button>
+          </div>
+          <button class="btn primary" type="submit">Add homework</button>
+        </form>
+        <div id="hw-groups" class="school-list"></div>
+        <details id="hw-done" class="sub-details" hidden>
+          <summary>Done <span class="count" id="hw-done-count"></span></summary>
+          <ul id="hw-done-list" class="list"></ul>
+          <button id="hw-clear" class="btn small ghost danger">Clear finished homework</button>
+        </details>
+      </article>
+
+      <article class="card">
+        <h2>Tests and exams</h2>
+        <form id="exam-form" class="form" autocomplete="off">
+          <div class="grid2">
+            <label>Subject<select name="subject"></select></label>
+            <label>Type
+              <select name="kind">
+                <option value="test">Test</option>
+                <option value="exam">Exam</option>
+                <option value="quiz">Quiz</option>
+                <option value="oral">Oral exam</option>
+                <option value="project">Project</option>
+              </select>
+            </label>
+          </div>
+          <label>What's on it (optional)
+            <input name="title" type="text" placeholder="e.g. Chapters 3 to 5" maxlength="100">
+          </label>
+          <div class="grid2">
+            <label>Date<input name="date" type="date" required></label>
+            <label>Time (optional)<input name="time" type="time"></label>
+          </div>
+          <button class="btn primary" type="submit">Add test</button>
+        </form>
+        <h3>Coming up</h3>
+        <ul id="exam-list" class="list"></ul>
+        <div id="exam-past-wrap" hidden>
+          <h3>Got it back? Add the grade</h3>
+          <ul id="exam-past" class="list"></ul>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Grades</h2>
+        <div id="grade-summary"></div>
+        <form id="grade-form" class="form" autocomplete="off">
+          <div class="grid3">
+            <label>Subject<select name="subject"></select></label>
+            <label>Grade<input name="value" type="text" inputmode="decimal" required></label>
+            <label>Date<input name="date" type="date"></label>
+          </div>
+          <label>For what (optional)
+            <input name="note" type="text" placeholder="e.g. Oral answer, homework check" maxlength="80">
+          </label>
+          <button class="btn primary" type="submit">Add grade</button>
+        </form>
+        <details id="grade-all" class="sub-details" hidden>
+          <summary>All grades</summary>
+          <ul id="grade-all-list" class="list"></ul>
+        </details>
+        <details class="sub-details">
+          <summary>Grading scale</summary>
+          <form id="scale-form" class="row gap wrap scale-form">
+            <label>Worst grade<input name="min" type="number" step="any" required></label>
+            <label>Best grade<input name="max" type="number" step="any" required></label>
+            <button class="btn small primary">Save</button>
+          </form>
+          <p class="muted">Used to color your grades green, orange or red. For 1 to 5 put 1 and 5. If 1 is the best (like 1 to 6), put 6 and 1.</p>
+        </details>
+      </article>
+
+      <article class="card">
+        <div class="row-between"><h2>Google Classroom</h2><button id="school-gc-refresh" class="btn small ghost">Refresh</button></div>
+        <ul id="school-classroom" class="list"></ul>
+      </article>
+
+      <article class="card">
+        <h2>Subjects and timetable</h2>
+        <div id="timetable"></div>
+        <div id="subject-list"></div>
+        <form id="subject-form" class="quick-add" autocomplete="off">
+          <input name="name" type="text" placeholder="Add a subject, e.g. Math" maxlength="40" aria-label="New subject">
+          <button class="btn primary">Add</button>
+        </form>
+      </article>
+    </section>
+
     <!-- ROUTINE -->
     <section id="view-routine" class="view" data-view="routine" hidden>
       <article class="card">
@@ -207,7 +330,7 @@
       <article class="card cal-card">
         <div id="cal-head" class="cal-head"></div>
         <div id="cal-grid" class="cal-grid"></div>
-        <p class="cal-legend muted"><span><i class="m-habit"></i>Habit</span><span><i class="m-step"></i>Goal step</span><span><i class="m-school"></i>Classroom</span><span><i class="m-task"></i>Task</span><span><b>12</b> spent</span></p>
+        <p class="cal-legend muted"><span><i class="m-habit"></i>Habit</span><span><i class="m-step"></i>Goal step</span><span><i class="m-school"></i>Classroom</span><span><i class="m-task"></i>Task</span><span><i class="m-hw"></i>Homework</span><span><i class="m-exam"></i>Test</span><span><b>12</b> spent</span></p>
       </article>
       <article class="card">
         <div class="row-between"><h2 id="cal-day-title"></h2><button id="cal-today" class="btn small ghost">Today</button></div>
@@ -274,13 +397,14 @@
           <label class="btn file-btn">Import backup<input id="import-file" type="file" accept="application/json" hidden></label>
         </div>
       </article>
-      <p class="muted version">Version 7 · routine</p>
+      <p class="muted version">Version 8 · school</p>
     </section>
   </main>
 
   <nav class="tabbar" aria-label="Sections">
     <button data-tab="today" class="active"><span aria-hidden="true">☀️</span>Today</button>
     <button data-tab="tasks"><span aria-hidden="true">✅</span>Tasks<b id="tasks-badge" class="tab-badge" hidden></b></button>
+    <button data-tab="school"><span aria-hidden="true">🎓</span>School<b id="school-badge" class="tab-badge" hidden></b></button>
     <button data-tab="routine"><span aria-hidden="true">💧</span>Routine</button>
     <button data-tab="calendar"><span aria-hidden="true">📅</span>Calendar</button>
     <button data-tab="expenses"><span aria-hidden="true">💶</span>Money</button>
@@ -292,6 +416,7 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="google.js"></script>
+  <script src="school.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

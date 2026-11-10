@@ -16,6 +16,7 @@ const DEFAULT_STATE = {
   goals: [],      // {id, title, habit, time:'HH:MM', steps:[{id,text,done}], log:{'YYYY-MM-DD':true}, created}
   routine: [],    // {id, text, log:{'YYYY-MM-DD':true}, created}
   tasks: [],      // {id, text, date:'YYYY-MM-DD'|'', time:'HH:MM'|'', done, doneAt}
+  // school: {subjects, classes, homework, exams, grades, scale} is created by school.js when first used
   notified: {},   // goalId -> 'YYYY-MM-DD' of the last reminder shown
   taskDone: {},   // Gmail/Classroom item id -> true when ticked off here
 };
@@ -152,6 +153,7 @@ function render() {
   renderGoals();
   renderTasks();
   renderRoutine();
+  renderSchool();
   renderCalendar();
   renderSettings();
 }
@@ -550,9 +552,10 @@ function renderCalendar() {
     a.steps.forEach(({ step }) => marks.push(`<i class="m-step ${step.done ? 'done' : ''}"></i>`));
     a.school.forEach(() => marks.push('<i class="m-school"></i>'));
     a.tasks.forEach((x) => marks.push(`<i class="m-task ${x.done ? 'done' : ''}"></i>`));
+    marks.push(...schoolMarks(key));
     const spent = sum(a.spent);
     cells.push(`<button class="cal-cell ${key === t ? 'today' : ''} ${key === calDay ? 'sel' : ''}" data-cal-day="${key}" aria-label="${fmtDay(key)}">
-      <span class="num">${d}</span><span class="marks">${marks.slice(0, 6).join('')}</span>${spent ? `<span class="amt">${Math.round(spent)}</span>` : ''}</button>`);
+      <span class="num">${d}</span><span class="marks">${marks.slice(0, 8).join('')}</span>${spent ? `<span class="amt">${Math.round(spent)}</span>` : ''}</button>`);
   }
   grid.innerHTML = cells.join('');
 
@@ -563,6 +566,7 @@ function renderCalendar() {
   const rd = routineDay(calDay);
   if (rd.total && calDay <= t) rows.push(`<li><span class="dot m-routine"></span><span class="grow"><span class="title">Routine ${rd.done}/${rd.total}</span>
     <span class="sub">${state.routine.filter((r) => r.log[calDay]).map((r) => esc(r.text)).join(', ') || 'Nothing ticked'}</span></span></li>`);
+  rows.push(...schoolRows(calDay));
   a.tasks.forEach((x) => rows.push(taskItem(x, false)));
   a.habits.forEach((g) => rows.push(`<li class="${g.log[calDay] ? 'done' : ''}">
     ${canTick ? `<input type="checkbox" data-habit="${g.id}" data-date="${calDay}" ${g.log[calDay] ? 'checked' : ''}>` : '<span class="dot m-habit"></span>'}
@@ -857,11 +861,13 @@ function checkReminders() {
     state.notified[key] = t; save();
     notify(`Task: ${x.text}`, `Planned for ${x.time}`);
   }
+  checkSchoolReminder();
 }
 
 // ---------- start ----------
 window.MyDay = { get state() { return state; }, save, render, toast, todayKey, esc };
 bind();
+bindSchool();
 let initialTab = 'today';
 try { initialTab = sessionStorage.getItem('myday.tab') || 'today'; } catch {}
 showTab(initialTab);
@@ -872,7 +878,7 @@ setInterval(checkReminders, 30 * 1000);
 let lastDay = todayKey();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
-    if (todayKey() !== lastDay) { lastDay = todayKey(); viewMonth = monthKey(new Date()); $('#exp-date').value = lastDay; $('#task-date').value = lastDay; render(); }
+    if (todayKey() !== lastDay) { lastDay = todayKey(); viewMonth = monthKey(new Date()); $('#exp-date').value = lastDay; $('#task-date').value = lastDay; $('#hw-form').due.value = keyIn(1); $('#grade-form').date.value = lastDay; render(); }
     checkReminders();
   }
 });
